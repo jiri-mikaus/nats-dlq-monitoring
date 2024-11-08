@@ -1,0 +1,83 @@
+version: "3"
+
+networks:
+  monitor-net:
+    driver: bridge
+
+services:
+  surveyor:
+    depends_on:
+      - nats
+    image: natsio/nats-surveyor:${SURVEYOR_DOCKER_TAG}
+    container_name: nats-surveyor
+    restart: no
+    volumes:
+      # - $NATS_SURVEYOR_CREDS:/etc/surveyor/SYS.creds
+      - ./observations:/observations
+      - ./jetstream:/jetstream
+    command: --log-level trace --count 1 --user admin --password pass -s nats://nats:4222 --accounts --observe /observations --jetstream /jetstream
+    networks:
+      - monitor-net
+    labels:
+      org.label-schema.group: "nats-monitoring"
+
+  prometheus:
+    image: prom/prometheus:${PROMETHEUS_DOCKER_TAG}
+    container_name: prometheus
+    restart: no
+    volumes:
+      - ./prometheus/:/etc/prometheus/
+      - $PROMETHEUS_STORAGE:/usr/local/share/prometheus
+    command: --config.file=/etc/prometheus/prometheus.yml --storage.tsdb.path=/usr/local/share/prometheus
+    networks:
+      - monitor-net
+    labels:
+      org.label-schema.group: "nats-monitoring"
+    depends_on:
+      - surveyor
+    ports:
+      - 9090:9090
+
+  grafana:
+    image: grafana/grafana:${GRAFANA_DOCKER_TAG}
+    container_name: grafana
+    restart: no
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - monitor-net
+    labels:
+      org.label-schema.group: "nats-monitoring"
+    depends_on:
+      - prometheus
+  nats:
+    container_name: surveyor-nats
+    image: nats:2.10
+    ports:
+    - 4222:4222
+    - 6222:6222
+    - 8222:8222
+    volumes:
+      - ./nats/:/etc/nats/
+    networks:
+      - monitor-net
+    tty: true
+    command: -c /etc/nats/server.conf --trace
+
+  vector:
+    container_name: vector
+    image: timberio/vector:latest-distroless-static
+    volumes:
+      - ./vector/stdout.yaml:/etc/vector/stdout.yaml
+      - ./vector/prometheus_exporter.yaml:/etc/vector/prometheus_exporter.yaml
+    networks:
+      - monitor-net
+    depends_on:
+      - nats
+    ports:
+      - 19090:9090
+    # command: -c /etc/vector/stdout.yaml
+    command: -c /etc/vector/prometheus_exporter.yaml

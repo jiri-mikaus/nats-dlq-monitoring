@@ -1,0 +1,20 @@
+sources:
+  dlq_monitor:
+    type: nats
+    connection_name: dlq_monitor
+    subject: $$JS.EVENT.ADVISORY.CONSUMER.MAX_DELIVERIES.teststream.test-fraud-call-logs-consumer
+    url: nats://nats:4222
+    queue: vector-dlq-monitor
+    auth:
+      strategy: user_password
+      user_password:
+        user: nats
+        password: rubber-hose
+
+sinks:
+  dlq_msg:
+    encoding:
+      codec: json
+    type: console
+    inputs:
+      - dlq_monitor
