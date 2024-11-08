@@ -67,6 +67,17 @@ services:
     tty: true
     command: -c /etc/nats/server.conf --trace
 
+  nats-exporter:
+    container_name: nats-exporter
+    image: natsio/prometheus-nats-exporter:latest
+    ports:
+      - 7777:7777
+    networks:
+      - monitor-net
+    depends_on:
+      - nats
+    command: -varz -channelz -connz -healthz -gatewayz -accstatz -leafz -jsz=all -routez -serverz -subz http://nats:8222
+
   vector:
     container_name: vector
     image: timberio/vector:latest-distroless-static
