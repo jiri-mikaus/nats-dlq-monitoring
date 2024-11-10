@@ -17,6 +17,11 @@ curl localhost:19090/metrics
 nats_dlq_message_count{subject="$JS.EVENT.ADVISORY.CONSUMER.MAX_DELIVERIES.teststream.test-fraud-call-logs-consumer"} 5 1731064698837
 ```
 
+### Nats prometheus exporter
+```
+curl localhost:7777/metrics
+```
+
 ### Prometheus
 In this example just simple prometheus instance [scraping](docker-compose/prometheus/prometheus.yml) the Vector. 
 
@@ -148,4 +153,13 @@ In this example just simple prometheus instance [scraping](docker-compose/promet
     },
     "ts": "2024-11-08T11:30:40.320195086Z"
     }
+    ```
+
+    ### Nats commands
+    ```
+    nats -s localhost:4222 --user=nats --password=rubber-hose consumer info
+    nats -s localhost:4222 --user=nats --password=rubber-hose stream info
+
+    # add test msg to the dlq stream
+     echo "test dlq" | nats -s localhost:4222 --user=nats --password=rubber-hose pub "\$JS.EVENT.ADVISORY.CONSUMER.MAX_DELIVERIES.teststream.test-fraud-call-logs-consumer"
     ```
